@@ -20,6 +20,7 @@ export default function RaffleApp() {
   const [error, setError] = useState<string | null>(null)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [progress, setProgress] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
   const resultsRef = useRef<HTMLDivElement>(null)
 
   const addTeam = () => {
@@ -77,6 +78,7 @@ export default function RaffleApp() {
     }
     setProgress(100)
     setCountdown(null)
+    setIsLoading(true)
 
     // Shuffle both teams and candidates
     const shuffledTeams = [...teams].sort(() => Math.random() - 0.5)
@@ -115,6 +117,7 @@ export default function RaffleApp() {
     }
 
     setIsDrawing(false)
+    setIsLoading(false)
     
     // Scroll to results after drawing is complete
     setTimeout(() => {
@@ -235,9 +238,9 @@ export default function RaffleApp() {
         </Button>
       </div>
 
-      {/* Countdown Overlay */}
+      {/* Countdown and Loading Overlay */}
       <AnimatePresence>
-        {countdown !== null && (
+        {(countdown !== null || isLoading) && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -250,23 +253,38 @@ export default function RaffleApp() {
               exit={{ scale: 0.5 }}
               className="flex flex-col items-center"
             >
-              <motion.div 
-                key={countdown}
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1.5, opacity: 1 }}
-                exit={{ scale: 2, opacity: 0 }}
-                transition={{ duration: 0.5 }}
-                className="text-6xl font-bold mb-8"
-              >
-                {countdown}
-              </motion.div>
-              <div className="w-64">
-                <Progress value={progress} className="h-2" />
-              </div>
-              <div className="flex items-center mt-4 text-muted-foreground">
-                <Clock className="mr-2 h-4 w-4" />
-                <span>Çekiliş başlıyor...</span>
-              </div>
+              {countdown !== null ? (
+                <>
+                  <motion.div 
+                    key={countdown}
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1.5, opacity: 1 }}
+                    exit={{ scale: 2, opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-6xl font-bold mb-8"
+                  >
+                    {countdown}
+                  </motion.div>
+                  <div className="w-64">
+                    <Progress value={progress} className="h-2" />
+                  </div>
+                  <div className="flex items-center mt-4 text-muted-foreground">
+                    <Clock className="mr-2 h-4 w-4" />
+                    <span>Çekiliş başlıyor...</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="mb-4"
+                  >
+                    <Shuffle className="h-8 w-8" />
+                  </motion.div>
+                  <span className="text-lg font-medium">Lütfen bekleyiniz...</span>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}
@@ -294,7 +312,7 @@ export default function RaffleApp() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="flex justify-between items-center p-3 bg-accent rounded-md"
+                      className="flex justify-between items-center p-4 bg-card border rounded-lg shadow-sm hover:shadow-md transition-shadow"
                     >
                       <div className="font-medium">{result.team}</div>
                       <div className="flex items-center">
