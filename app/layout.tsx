@@ -1,10 +1,14 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { ThemeProvider } from '@/components/theme-provider'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: 'Çekiliş App',
+  description: 'Ufukcan Eski tarafından çekiliş uygulaması.',
+  generator: 'Ufukcan Eski',
+  icons: {
+    icon: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({
@@ -13,8 +17,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="tr" suppressHydrationWarning>
+      <head />
+      <body className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   )
 }

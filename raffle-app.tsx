@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
-import { PlusCircle, Trash2, Shuffle } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { PlusCircle, Trash2, Shuffle, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { motion, AnimatePresence } from "framer-motion"
+import { Progress } from "@/components/ui/progress"
 
 export default function RaffleApp() {
   const [teams, setTeams] = useState<string[]>([])
@@ -17,6 +18,9 @@ export default function RaffleApp() {
   const [results, setResults] = useState<{ team: string; candidate: string | null }[]>([])
   const [isDrawing, setIsDrawing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [countdown, setCountdown] = useState<number | null>(null)
+  const [progress, setProgress] = useState(0)
+  const resultsRef = useRef<HTMLDivElement>(null)
 
   const addTeam = () => {
     if (!newTeam.trim()) return
@@ -63,6 +67,16 @@ export default function RaffleApp() {
     setIsDrawing(true)
     setError(null)
     setResults([])
+    
+    // Start countdown from 3
+    setCountdown(3)
+    for (let i = 3; i > 0; i--) {
+      setCountdown(i)
+      setProgress((3 - i) * 33.33)
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+    }
+    setProgress(100)
+    setCountdown(null)
 
     // Shuffle both teams and candidates
     const shuffledTeams = [...teams].sort(() => Math.random() - 0.5)
@@ -101,6 +115,13 @@ export default function RaffleApp() {
     }
 
     setIsDrawing(false)
+    
+    // Scroll to results after drawing is complete
+    setTimeout(() => {
+      if (resultsRef.current) {
+        resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 300)
   }
 
   const resetAll = () => {
@@ -112,7 +133,15 @@ export default function RaffleApp() {
 
   return (
     <div className="container mx-auto p-4 max-w-4xl">
-      <h1 className="text-3xl font-bold text-center mb-8">Çekiliş Uygulaması</h1>
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="flex flex-col items-center mb-8"
+      >
+        <img src="/logo.svg" alt="Çekiliş Uygulaması Logo" className="w-32 h-32 mb-4" />
+        <h1 className="text-3xl font-bold text-center">Çekiliş Uygulaması</h1>
+      </motion.div>
 
       {error && (
         <Alert variant="destructive" className="mb-4">
@@ -206,43 +235,99 @@ export default function RaffleApp() {
         </Button>
       </div>
 
+      {/* Countdown Overlay */}
+      <AnimatePresence>
+        {countdown !== null && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50"
+          >
+            <motion.div 
+              initial={{ scale: 0.5 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.5 }}
+              className="flex flex-col items-center"
+            >
+              <motion.div 
+                key={countdown}
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1.5, opacity: 1 }}
+                exit={{ scale: 2, opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-6xl font-bold mb-8"
+              >
+                {countdown}
+              </motion.div>
+              <div className="w-64">
+                <Progress value={progress} className="h-2" />
+              </div>
+              <div className="flex items-center mt-4 text-muted-foreground">
+                <Clock className="mr-2 h-4 w-4" />
+                <span>Çekiliş başlıyor...</span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Results Section */}
       {results.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Çekiliş Sonuçları</CardTitle>
-            <CardDescription>Takım-aday eşleşmeleri</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <AnimatePresence>
-                {results.map((result, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex justify-between items-center p-3 bg-accent rounded-md"
-                  >
-                    <div className="font-medium">{result.team}</div>
-                    <div className="flex items-center">
-                      <span className="mx-2">➡️</span>
-                      {result.candidate ? (
-                        <Badge variant="secondary" className="ml-2">
-                          {result.candidate}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="ml-2 text-muted-foreground">
-                          Boş
-                        </Badge>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div
+          ref={resultsRef}
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Çekiliş Sonuçları</CardTitle>
+              <CardDescription>Takım-aday eşleşmeleri</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <AnimatePresence>
+                  {results.map((result, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      className="flex justify-between items-center p-3 bg-accent rounded-md"
+                    >
+                      <div className="font-medium">{result.team}</div>
+                      <div className="flex items-center">
+                        <motion.span 
+                          className="mx-2"
+                          animate={{ rotate: [0, 10, -10, 0] }}
+                          transition={{ duration: 0.5, delay: index * 0.1 + 0.2 }}
+                        >
+                          ➡️
+                        </motion.span>
+                        {result.candidate ? (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 500, delay: index * 0.1 + 0.3 }}
+                          >
+                            <Badge variant="secondary" className="ml-2">
+                              {result.candidate}
+                            </Badge>
+                          </motion.div>
+                        ) : (
+                          <Badge variant="outline" className="ml-2 text-muted-foreground">
+                            Boş
+                          </Badge>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       )}
     </div>
   )
