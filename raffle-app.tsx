@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { PlusCircle, Trash2, Shuffle, Clock } from "lucide-react"
+import { PlusCircle, Trash2, Shuffle, Clock, Download, Camera, History, Sun, Moon, Laptop } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,6 +9,15 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { motion, AnimatePresence } from "framer-motion"
 import { Progress } from "@/components/ui/progress"
+import html2canvas from "html2canvas"
+
+interface RaffleHistory {
+  id: string
+  date: string
+  teams: string[]
+  candidates: string[]
+  results: { team: string; candidate: string | null }[]
+}
 
 export default function RaffleApp() {
   const [teams, setTeams] = useState<string[]>([])
@@ -21,7 +30,161 @@ export default function RaffleApp() {
   const [countdown, setCountdown] = useState<number | null>(null)
   const [progress, setProgress] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
+  const [raffleHistory, setRaffleHistory] = useState<RaffleHistory[]>([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [theme, setTheme] = useState<"light" | "dark" | "system">("system")
   const resultsRef = useRef<HTMLDivElement>(null)
+  const [leagues, setLeagues] = useState<{[key: string]: string[]}>({})
+
+  // Klavye kısayolu için event listener ekle
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Shift+R kısayolu ile çekiliş yap
+      if (e.shiftKey && e.key === 'R') {
+        if (!isDrawing && teams.length > 0 && candidates.length > 0) {
+          performDraw();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [teams, candidates, isDrawing]); // Bağımlılıkları ekleyin
+
+  // Ligleri JSON dosyasından yükle
+  useEffect(() => {
+    fetch('/leagues.json')
+      .then(response => response.json())
+      .then(data => setLeagues(data))
+      .catch(error => {
+        console.error('Ligler yüklenirken hata:', error)
+        setError('Ligler yüklenemedi')
+      })
+  }, [])
+
+  // Add theme effect
+  useEffect(() => {
+    // Check if we have a saved theme
+    const savedTheme = localStorage.getItem('theme') as "light" | "dark" | "system" | null
+    if (savedTheme) {
+      setTheme(savedTheme)
+    }
+    
+    // Apply the theme
+    applyTheme(savedTheme || "system")
+  }, [])
+  
+  // Function to apply theme
+  const applyTheme = (newTheme: "light" | "dark" | "system") => {
+    const root = window.document.documentElement
+    
+    // Remove existing theme classes
+    root.classList.remove("light", "dark")
+    
+    // Apply new theme
+    if (newTheme === "system") {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+      root.classList.add(systemTheme)
+    } else {
+      root.classList.add(newTheme)
+    }
+  }
+  
+  // Function to change theme
+  const changeTheme = (newTheme: "light" | "dark" | "system") => {
+    setTheme(newTheme)
+    localStorage.setItem('theme', newTheme)
+    applyTheme(newTheme)
+  }
+
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('raffleHistory')
+    if (savedHistory) {
+      setRaffleHistory(JSON.parse(savedHistory))
+    }
+  }, [])
+
+  const saveToHistory = (newResults: typeof results) => {
+    const newRaffle: RaffleHistory = {
+      id: Date.now().toString(),
+      date: new Date().toLocaleString(),
+      teams: [...teams],
+      candidates: [...candidates],
+      results: newResults
+    }
+    const updatedHistory = [newRaffle, ...raffleHistory]
+    setRaffleHistory(updatedHistory)
+    localStorage.setItem('raffleHistory', JSON.stringify(updatedHistory))
+  }
+
+  const captureScreenshot = async () => {
+    if (!resultsRef.current) return
+    try {
+      // Sonuç kartını doğrudan hedefle
+      const card = resultsRef.current
+      
+      // Geçici bir klon oluştur
+      const clone = card.cloneNode(true) as HTMLElement
+      
+      // Klondaki footer'ı bul ve kaldır
+      const footer = clone.querySelector('[class*="CardFooter"]')
+      if (footer) {
+        footer.remove()
+      }
+      
+      // Klonu geçici olarak belgeye ekle ama görünmez yap
+      clone.style.position = 'fixed'
+      clone.style.top = '-9999px'
+      clone.style.left = '-9999px'
+      document.body.appendChild(clone)
+      
+      // Ekran görüntüsünü al
+      const canvas = await html2canvas(clone, {
+        backgroundColor: null, // Arka plan rengini otomatik al
+        scale: 2, // Daha yüksek kalite
+        logging: false
+      })
+      
+      // Geçici klonu kaldır
+      document.body.removeChild(clone)
+      
+      // İndirme bağlantısını oluştur
+      const image = canvas.toDataURL('image/png')
+      const link = document.createElement('a')
+      link.href = image
+      link.download = `raffle-results-${new Date().toISOString()}.png`
+      link.click()
+      
+      // Hata mesajını temizle (başarılı olduğunda)
+      setError(null)
+    } catch (err) {
+      console.error('Ekran görüntüsü hatası:', err)
+      setError('Ekran görüntüsü alınırken bir hata oluştu: ' + (err instanceof Error ? err.message : String(err)))
+    }
+  }
+
+  const exportToCSV = () => {
+    if (results.length === 0) return
+    
+    // Create CSV content
+    let csvContent = "Takım,Aday\n";
+    results.forEach(result => {
+      csvContent += `"${result.team}","${result.candidate || 'Boş'}"\n`;
+    });
+    
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `raffle-results-${new Date().toISOString()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
   const addTeam = () => {
     if (!newTeam.trim()) return
@@ -31,6 +194,15 @@ export default function RaffleApp() {
     }
     setTeams([...teams, newTeam.trim()])
     setNewTeam("")
+    setError(null)
+  }
+  
+  const selectLeague = (leagueName: string) => {
+    // Seçilen ligin takımlarını al
+    const leagueTeams = leagues[leagueName] || []
+    
+    // Takımları doğrudan ayarla (önceki takımları temizle)
+    setTeams(leagueTeams)
     setError(null)
   }
 
@@ -119,6 +291,9 @@ export default function RaffleApp() {
     setIsDrawing(false)
     setIsLoading(false)
     
+    // Save to history after drawing is complete
+    saveToHistory([...tempResults]);
+    
     // Scroll to results after drawing is complete
     setTimeout(() => {
       if (resultsRef.current) {
@@ -136,6 +311,35 @@ export default function RaffleApp() {
 
   return (
     <div className="container mx-auto p-4 max-w-4xl">
+      <div className="flex justify-end mb-4">
+        <div className="flex space-x-2">
+          <Button 
+            variant={theme === "light" ? "default" : "outline"} 
+            size="icon" 
+            onClick={() => changeTheme("light")}
+            title="Açık Tema"
+          >
+            <Sun className="h-5 w-5" />
+          </Button>
+          <Button 
+            variant={theme === "dark" ? "default" : "outline"} 
+            size="icon" 
+            onClick={() => changeTheme("dark")}
+            title="Koyu Tema"
+          >
+            <Moon className="h-5 w-5" />
+          </Button>
+          <Button 
+            variant={theme === "system" ? "default" : "outline"} 
+            size="icon" 
+            onClick={() => changeTheme("system")}
+            title="Sistem Teması"
+          >
+            <Laptop className="h-5 w-5" />
+          </Button>
+        </div>
+      </div>
+      
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -172,6 +376,24 @@ export default function RaffleApp() {
                 <PlusCircle className="h-5 w-5" />
               </Button>
             </div>
+            
+            {/* Lig seçimi */}
+            <div className="mb-4">
+              <p className="text-sm text-muted-foreground mb-2">Veya bir lig seçin:</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.keys(leagues).map((league) => (
+                  <Button 
+                    key={league} 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => selectLeague(league)}
+                  >
+                    {league} ({leagues[league].length})
+                  </Button>
+                ))}
+              </div>
+            </div>
+            
             <div className="space-y-2">
               {teams.map((team, index) => (
                 <div key={index} className="flex justify-between items-center p-2 bg-muted rounded-md">
@@ -229,6 +451,7 @@ export default function RaffleApp() {
           onClick={performDraw}
           disabled={isDrawing || teams.length === 0 || candidates.length === 0}
           className="px-8"
+          title="Kısayol: Shift+R"
         >
           <Shuffle className="mr-2 h-5 w-5" />
           Çekiliş Yap
@@ -236,6 +459,21 @@ export default function RaffleApp() {
         <Button variant="outline" onClick={resetAll}>
           Tümünü Temizle
         </Button>
+        {results.length > 0 && (
+          <Button variant="outline" onClick={exportToCSV}>
+            CSV Olarak İndir
+          </Button>
+        )}
+      </div>
+
+      {/* Kısayol bilgisi */}
+      <div className="text-center text-sm text-muted-foreground mb-6">
+        <span className="inline-flex items-center">
+          <kbd className="px-2 py-1 mx-1 text-xs font-semibold bg-muted border rounded">Shift</kbd>
+          +
+          <kbd className="px-2 py-1 mx-1 text-xs font-semibold bg-muted border rounded">R</kbd>
+          kısayolunu kullanarak hızlıca çekiliş yapabilirsiniz.
+        </span>
       </div>
 
       {/* Countdown and Loading Overlay */}
@@ -299,42 +537,56 @@ export default function RaffleApp() {
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <Card>
-            <CardHeader>
-              <CardTitle>Çekiliş Sonuçları</CardTitle>
-              <CardDescription>Takım-aday eşleşmeleri</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Çekiliş Sonuçları</CardTitle>
+                <CardDescription>Takım-aday eşleşmeleri</CardDescription>
+              </div>
+              <div className="flex space-x-2">
+                <Button variant="outline" size="sm" onClick={exportToCSV}>
+                  <Download className="mr-2 h-4 w-4" />
+                  CSV
+                </Button>
+                <Button variant="outline" size="sm" onClick={captureScreenshot}>
+                  <Camera className="mr-2 h-4 w-4" />
+                  Görüntü
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 <AnimatePresence>
-                  {results.map((result, index) => (
+                  {/* Önce dolu sonra boş olacak şekilde sırala */}
+                  {[...results]
+                    .sort((a, b) => {
+                      // Dolu olanlar önce (null olmayanlar)
+                      if (a.candidate && !b.candidate) return -1;
+                      // Boş olanlar sonra (null olanlar)
+                      if (!a.candidate && b.candidate) return 1;
+                      return 0;
+                    })
+                    .map((result, index) => (
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="flex justify-between items-center p-4 bg-card border rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                      className={`flex justify-between items-center p-3 bg-card border rounded-lg shadow-sm hover:shadow-md transition-shadow ${!result.candidate ? 'border-red-500' : ''}`}
                     >
-                      <div className="font-medium">{result.team}</div>
-                      <div className="flex items-center">
-                        <motion.span 
-                          className="mx-2"
-                          animate={{ rotate: [0, 10, -10, 0] }}
-                          transition={{ duration: 0.5, delay: index * 0.1 + 0.2 }}
-                        >
-                          ➡️
-                        </motion.span>
+                      <div className={`font-medium ${!result.candidate ? 'text-red-500' : ''}`}>{result.team}</div>
+                      <div>
                         {result.candidate ? (
                           <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             transition={{ type: "spring", stiffness: 500, delay: index * 0.1 + 0.3 }}
                           >
-                            <Badge variant="secondary" className="ml-2">
+                            <Badge variant="secondary">
                               {result.candidate}
                             </Badge>
                           </motion.div>
                         ) : (
-                          <Badge variant="outline" className="ml-2 text-muted-foreground">
+                          <Badge variant="destructive" className="text-white">
                             Boş
                           </Badge>
                         )}

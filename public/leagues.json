@@ -1,0 +1,7 @@
+{
+  "Süper Lig": ["Galatasaray", "Fenerbahçe", "Beşiktaş", "Trabzonspor", "Başakşehir", "Adana Demirspor", "Konyaspor", "Antalyaspor", "Samsunspor", "Kayserispor", "Hatayspor", "Kasımpaşa", "Sivasspor", "Ankaragücü", "Rizespor", "Gaziantep FK", "İstanbulspor", "Karagümrük", "Alanyaspor", "Pendikspor"],
+  "Premier Lig": ["Manchester City", "Arsenal", "Liverpool", "Chelsea", "Manchester United", "Tottenham", "Newcastle", "Aston Villa", "Brighton", "West Ham", "Crystal Palace", "Fulham", "Brentford", "Bournemouth", "Nottingham Forest", "Everton", "Wolves", "Leicester", "Southampton", "Burnley"],
+  "La Liga": ["Real Madrid", "Barcelona", "Atletico Madrid", "Sevilla", "Villarreal", "Real Sociedad", "Athletic Bilbao", "Valencia", "Real Betis", "Osasuna", "Celta Vigo", "Mallorca", "Girona", "Almeria", "Cadiz", "Getafe", "Espanyol", "Valladolid", "Rayo Vallecano", "Las Palmas"],
+  "Bundesliga": ["Bayern Münih", "Borussia Dortmund", "RB Leipzig", "Bayer Leverkusen", "Wolfsburg", "Eintracht Frankfurt", "Borussia Mönchengladbach", "Hoffenheim", "Stuttgart", "Freiburg", "Mainz", "Union Berlin", "Augsburg", "Werder Bremen", "Köln", "Bochum", "Heidenheim", "Holstein Kiel"],
+  "Serie A": ["Inter", "Milan", "Juventus", "Napoli", "Roma", "Lazio", "Atalanta", "Fiorentina", "Bologna", "Torino", "Monza", "Udinese", "Sassuolo", "Empoli", "Salernitana", "Lecce", "Verona", "Cagliari", "Genoa", "Como"]
+}
