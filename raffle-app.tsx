@@ -311,7 +311,7 @@ export default function RaffleApp() {
 
   return (
     <div className="container mx-auto p-4 max-w-4xl">
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-end mb-4 fixed right-5">
         <div className="flex space-x-2">
           <Button 
             variant={theme === "light" ? "default" : "outline"} 
@@ -459,11 +459,6 @@ export default function RaffleApp() {
         <Button variant="outline" onClick={resetAll}>
           Tümünü Temizle
         </Button>
-        {results.length > 0 && (
-          <Button variant="outline" onClick={exportToCSV}>
-            CSV Olarak İndir
-          </Button>
-        )}
       </div>
 
       {/* Kısayol bilgisi */}
