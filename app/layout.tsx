@@ -24,7 +24,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/5 via-background to-background/90">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <NavigationBar />
-          <main className="flex min-h-[calc(100vh-3.5rem)] w-full items-center justify-center py-8">
+          <main className="flex min-h-[calc(100vh-3.6rem)] w-full items-center justify-center py-8">
             {children}
           </main>
         </ThemeProvider>
